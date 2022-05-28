@@ -1,0 +1,24 @@
+unset UNICON_REPLAY
+unsetenv UNICON_REPLAY
+from genie.testbed import load
+from ats.log.utils import banner
+from genie.utils.diff import Diff
+from genie.libs.sdk.apis.iosxe.bgp.get import get_bgp_session_count
+pre_bgp_ops = dev_xe.learn("bgp")
+rig_bgp_estab_nbrs = dev_xe.api.get_bgp_session_count(in_state='established')
+dev_xe.configure("router bgp 65000\n"
+                 " neighbor 10.2.2.2 shutdown")
+log.info(banner("Use Genie Diff to verify BGP neighbor is shutdown on XE device '{}'".\
+            format(dev_xe.name)))
+
+bgp_diff = Diff(pre_bgp_ops.info, post_bgp_ops1.info)
+bgp_diff.findDiff()
+log.info("Genie Diffs observed, BGP neighbor is shutdown/missing:\n\n" + str(bgp_diff) + "\n")
+intf_output = dev_xe.parse('show ip interface brief')
+
+for interface in intf_output['interface']:
+    status = intf_output['interface'][interface]['status']
+    if status == 'up':
+        log.info("\nPASS: Interface {intf} status is: '{s}'".format(intf=interface, s=status))
+    elif status == 'down':
+        log.error("\nFAIL: Interface {intf} status is: '{s}'".format(intf=interface, s=status))
